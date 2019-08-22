@@ -1,8 +1,7 @@
 import java.util.Properties
-import java.util.concurrent.Future
 
 import org.apache.kafka.clients.CommonClientConfigs
-import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord, RecordMetadata}
+import org.apache.kafka.clients.producer._
 
 object Producer {
   val testTopic = "my-topic"
@@ -16,10 +15,15 @@ object Producer {
     producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer")
     val producer = new KafkaProducer[String, String](producerProps)
 
-    (1 to 100).foreach { i =>
-      val result: Future[RecordMetadata] = producer.send(new ProducerRecord[String, String](testTopic, s"key$i", s"value$i"))
-      val metadata = result.get()
-      println(s"$metadata")
+    (1 to 1000000).foreach { i =>
+      val callback: Callback = (metadata: RecordMetadata, exception: Exception) => {
+        if (exception != null) {
+          println("ERROR: " + exception)
+        }
+
+        println(metadata)
+      }
+      producer.send(new ProducerRecord[String, String](testTopic, s"key$i", s"value$i"), callback)
     }
 
     producer.close()
